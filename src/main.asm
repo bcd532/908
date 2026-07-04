@@ -27,7 +27,7 @@ puts:
     int 0x10
 
     jmp .loop
-done:
+.done:
     pop ax
     pop si
     ret 
