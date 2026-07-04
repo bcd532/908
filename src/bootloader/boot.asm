@@ -105,6 +105,9 @@ main:
 
     hlt
 
+.halt:
+    jmp .halt
+
 floppy_error:
     mov si, msg_read_failed
     call puts
