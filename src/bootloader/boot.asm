@@ -3,9 +3,9 @@ bits 16
 
 %define ENDL 0x0D, 0x0a ;
 
-#
-# FAT12 header
-#
+;
+; FAT12 header
+;
 jmp short start
 nop
 
@@ -22,7 +22,7 @@ bdb_heads:                      dw 2
 bdb_hidden_sectorss:            dd 0
 bdb_large_sector_count:         dd 0
 
-# extended boot record
+; extended boot record
 ebr_drive_number:               db 0                    ; 0x00 floppy, 0x80 hdd, useless
                                 db 0                    ; reserved
 ebr_signature:                  db 29h
