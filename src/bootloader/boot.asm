@@ -25,8 +25,8 @@ bdb_oem:                        db 'MSQIN4.1'           ; 8-byte OEM identifier
 bdb_bytes_per_sector:           dw 512                  ; sector size in bytes
 bdb_sectors_per_cluster:        db 1                    ; sectors per allocation cluster
 bdb_reserved_sectors:           dw 1                    ; reserved sectors before FAT
-bdb_fat_count:                  db 2                    ; number of FAT copies
-bdb_root_dir_entries:           dw 0E0h                 ; number of root directory entries
+bdb_fat_count:                  db 2                    ; number of FAT copies              ; number of root directory entries
+bdb_dir_entries_count:          dw 0E0h                 ; number of 
 bdb_media_descriptor_type:      db 0F0h                 ; media descriptor for floppy
 bdb_sectors_per_fat:            dw 9                    ; sectors used by each FAT
 bdb_sectors_per_track:          dw 18                   ; sectors per track
@@ -40,8 +40,8 @@ bdb_large_sector_count:         dd 0                    ; large sector count (un
 ebr_drive_number:               db 0                    ; BIOS drive number (floppy = 0x00)
 ebr_reserved:                   db 0                    ; reserved byte
 ebr_boot_signature:             db 29h                  ; extended boot signature
-ebr_volume_id:                  db 0h, 9h, 0h, 8h  ; unique 4-byte volume ID
-ebr_volume_label:               db 'NINE ZERO EIGHT'    ; volume label (15 chars)
+ebr_volume_id:                  db 0h, 9h, 0h, 8h       ; unique 4-byte volume ID
+ebr_volume_label:               db 'NINE ZERO 8'    ; volume label (15 chars)
 ebr_system_id:                  db 'FAT12   '           ; filesystem type (8 chars)
 
 ; ----------------------------------------------------------------------------
