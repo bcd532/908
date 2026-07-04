@@ -94,7 +94,7 @@ main:
     mov [ebr_drive_number], dl
 
     ; Read one sector from the disk into memory at 0x7E00.
-    mov ax, 1               ; LBA sector 1 (second sector)
+    mov ax, 33              ; LBA sector 1 (first data sector)
     mov cl, 1               ; read 1 sector
     
     mov bx, 0x7E00          ; destination: 0x7E00
@@ -104,10 +104,7 @@ main:
     mov si, msg_hello
     call puts
 
-    hlt
-
-.halt:
-    jmp .halt
+    jmp 0x07E0:0x0000
 
 floppy_error:
     mov si, msg_read_failed
