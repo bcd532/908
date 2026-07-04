@@ -27,6 +27,7 @@ bdb_sectors_per_cluster:        db 1                    ; sectors per allocation
 bdb_reserved_sectors:           dw 1                    ; reserved sectors before FAT
 bdb_fat_count:                  db 2                    ; number of FAT copies              ; number of root directory entries
 bdb_dir_entries_count:          dw 0E0h                 ; number of 
+bdb_total_sectors:              dw 2880
 bdb_media_descriptor_type:      db 0F0h                 ; media descriptor for floppy
 bdb_sectors_per_fat:            dw 9                    ; sectors used by each FAT
 bdb_sectors_per_track:          dw 18                   ; sectors per track
