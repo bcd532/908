@@ -96,6 +96,7 @@ main:
     ; Read one sector from the disk into memory at 0x7E00.
     mov ax, 1               ; LBA sector 1 (second sector)
     mov cl, 1               ; read 1 sector
+    
     mov bx, 0x7E00          ; destination: 0x7E00
     call disk_read
 
@@ -165,7 +166,9 @@ disk_read:
     push dx
     push di
 
+    push cx
     call lba_to_chs
+    pop ax
 
     mov ah, 0x02
     mov di, 3                       ; retry count
