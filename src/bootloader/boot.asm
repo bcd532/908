@@ -25,9 +25,9 @@ bdb_oem:                        db 'MSQIN4.1'           ; 8-byte OEM identifier
 bdb_bytes_per_sector:           dw 512                  ; sector size in bytes
 bdb_sectors_per_cluster:        db 1                    ; sectors per allocation cluster
 bdb_reserved_sectors:           dw 1                    ; reserved sectors before FAT
-bdb_fat_count:                  db 2                    ; number of FAT copies              ; number of root directory entries
-bdb_dir_entries_count:          dw 0E0h                 ; number of 
-bdb_total_sectors:              dw 2880
+bdb_fat_count:                  db 2                    ; number of FAT copies
+bdb_dir_entries_count:          dw 0E0h                 ; number of root entries
+bdb_total_sectors:              dw 2880                 ; total number of sectors
 bdb_media_descriptor_type:      db 0F0h                 ; media descriptor for floppy
 bdb_sectors_per_fat:            dw 9                    ; sectors used by each FAT
 bdb_sectors_per_track:          dw 18                   ; sectors per track
