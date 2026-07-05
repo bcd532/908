@@ -22,11 +22,11 @@ p_err     db "[ERROR] ", 0
 p_warn    db "[WARN] ", 0
 
 ; --- Subsystems / Subjects ---
-kern_load db "KERNEL LOADING ", 0
+kern_load db "KERNEL BOOT ", 0
 s_disk    db "DISK READ ", 0
 
 ; --- Outcomes / Suffixes ---
-o_pass    db "PASSED", ENDL, 0
+o_pass    db "SUCCESSFUL", ENDL, 0
 o_fail    db "FAILED", ENDL, 0
 
 start:
