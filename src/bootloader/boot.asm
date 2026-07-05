@@ -197,8 +197,10 @@ main:
 .a20_ok:
     mov si, a20_success_msg
     call puts
-    jmp 0x07E0:0x0000
+    jmp jmp_to_kernel
 
+jmp_to_kernel:
+    jmp 0x07E0:0x0000 ; Jump to kernel
 
 enable_a20:
     mov ax, 0x2401
