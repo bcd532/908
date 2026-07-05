@@ -109,6 +109,7 @@ check_a20_exit:
 
     ret
 
+
 %ifdef FORCE_A20_OFF
 ; ---------------------------------------------------------------------------
 ; disable_a20: TEST HELPER ONLY. Forces the A20 line OFF via the fast-A20 port
@@ -182,8 +183,11 @@ main:
 
     call check_a20
     cmp ax, 1
-
     je .a20_ok
+
+    mov si, a20_notfound_msg
+    call puts
+
     call enable_a20
     call check_a20
     cmp ax, 1               ; check if a20 passed
@@ -317,8 +321,8 @@ disk_reset:
 ; ----------------------------------------------------------------------------
 bootloader_success_msg: db '[ok] BOOTLOADER SUCCESSFUL', ENDL, 0
 disk_read_failed_msg: db '[WARNING] READ FROM DISK FAILED !', ENDL, 0
-a20_fail_msg: db '[WARNING] A20 NOT ENABLED... ATTEMPTING ENABLE...', ENDL, 0 
-a20_success_msg: db '[ok] A20 ENABLED', ENDL, 0
+a20_fail_msg: db '[WARNING] A20 ENABLE FAILED !', ENDL, 0 
+a20_notfound_msg: db '[WARNING] A20 NOT FOUND. RETRYING...', ENDL, 0
 
 ; ----------------------------------------------------------------------------
 ; Boot sector padding and signature
