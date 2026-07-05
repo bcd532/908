@@ -321,7 +321,7 @@ disk_reset:
 ; ----------------------------------------------------------------------------
 bootloader_success_msg: db '[ok] BOOTLOADER SUCCESSFUL', ENDL, 0
 disk_read_failed_msg: db '[WARNING] READ FROM DISK FAILED !', ENDL, 0
-a20_success_msg: db '[ok] A20 ENABLE SUCCESSFUL', ENDL 0
+a20_success_msg: db '[ok] A20 ENABLE SUCCESSFUL', ENDL, 0
 a20_fail_msg: db '[WARNING] A20 ENABLE FAILED !', ENDL, 0 
 a20_notfound_msg: db '[WARNING] A20 NOT FOUND. RETRYING...', ENDL, 0
 
