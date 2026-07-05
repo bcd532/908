@@ -11,9 +11,5 @@
 - osdev wiki
 
 #### use of llm in project
-- exhausting boilerplate over 200 lines that does nothing > [!IMPORTANT]
-- documentation
-
-#### contribution
-- eh?
+- documentation & information, never code
 
