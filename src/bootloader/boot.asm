@@ -11,7 +11,7 @@ bits 16
 
 ; Endline Macro
 %define ENDL 0x0D, 0x0A
-%define SECTOR_COUNT 15625
+%define SECTOR_COUNT 64
 
 ; ----------------------------------------------------------------------------
 ; FAT12 BIOS Parameter Block (BPB)
