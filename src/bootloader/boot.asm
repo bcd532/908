@@ -11,6 +11,7 @@ bits 16
 
 ; Endline Macro
 %define ENDL 0x0D, 0x0A
+%define SECTOR_COUNT 15625
 
 ; ----------------------------------------------------------------------------
 ; FAT12 BIOS Parameter Block (BPB)
@@ -171,7 +172,7 @@ main:
 
     ; Load the kernel from the first data sector into memory at 0x7E00.
     mov ax, 33              ; LBA 33 = first data sector (where kernel.bin lives)
-    mov cl, 16              ; read 16 sectors (up to 8 KB of kernel)
+    mov cl, SECTOR_COUNT    ; Reads up to the sector count
     mov bx, 0x7E00          ; destination: 0x7E00
     call disk_read
 
