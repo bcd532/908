@@ -53,10 +53,12 @@ start:
     jmp main
 
 
-; check_20: check the status of the a20 line in a self-contained state-preserving way.
-; function can be modified as necessary by removing push's at beginning and their respecive pop's at the end if complete self-containment is not required
-; Returns: 0 in ax if the a20 line is disabled
-;          1 in ax if the a20 line is enabled
+; ---------------------------------------------------------------------------
+; check_a20: report whether the A20 line is enabled, preserving all registers.
+; It writes to a low address and its 1 MB-wrapped alias; if the alias changed
+; too, addresses wrapped and A20 is off.
+; Returns: AX = 0 if A20 is disabled, AX = 1 if A20 is enabled.
+; ---------------------------------------------------------------------------
 check_a20:
     pushf
     push ds 
@@ -167,10 +169,9 @@ main:
     ; This proves the drive number is available in DL.
     mov [ebr_drive_number], dl
 
-    ; Read one sector from the disk into memory at 0x7E00.
-    mov ax, 33              ; LBA sector 1 (first data sector)
-    mov cl, 16               ; read 16 sector
-    
+    ; Load the kernel from the first data sector into memory at 0x7E00.
+    mov ax, 33              ; LBA 33 = first data sector (where kernel.bin lives)
+    mov cl, 16              ; read 16 sectors (up to 8 KB of kernel)
     mov bx, 0x7E00          ; destination: 0x7E00
     call disk_read
 
@@ -197,16 +198,19 @@ main:
 .a20_ok:
     mov si, a20_success_msg
     call puts
-    jmp jmp_to_kernel
+    jmp 0x0000:0x7E00       ; hand off to the kernel loaded at 0x7E00
 
-jmp_to_kernel:
-    jmp 0x07E0:0x0000 ; Jump to kernel
-
+; ---------------------------------------------------------------------------
+; enable_a20: ask the BIOS to turn the A20 line on (INT 15h, AX=2401h).
+; ---------------------------------------------------------------------------
 enable_a20:
     mov ax, 0x2401
     int 0x15
     ret
 
+; ---------------------------------------------------------------------------
+; Error handlers: print a message, then wait for a key and halt.
+; ---------------------------------------------------------------------------
 floppy_error:
     mov si, disk_read_failed_msg
     call puts
@@ -214,18 +218,8 @@ floppy_error:
 
 a20_failed:
     mov si, a20_fail_msg
-    call a20_attempt_enable
-
-a20_attempt_enable:
-    mov ax, 0x2403
-    int 0x15
-    
-    mov ax, 0x2402
-    int 0x15
-    
-    ret 
-
-
+    call puts
+    jmp wait_key_and_reboot
 
 wait_key_and_reboot:
     mov ah, 0

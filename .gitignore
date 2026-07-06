@@ -1,8 +1,11 @@
-# Build artifacts — assembled binaries, floppy image, debug traces/screenshots
+# Build artifacts: 
 build/
 
 # Logs
 *.log
+
+# Binaries
+i686-elf-binutils/
 
 # Local editor / tooling state
 .claude/
