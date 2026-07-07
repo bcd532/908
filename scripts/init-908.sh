@@ -26,14 +26,30 @@ BOOT_ASM=$SRC_DIR/bootloader/boot.asm
 KERNEL_ASM=$SRC_DIR/kernel/main.asm
 BOOT_BIN=$BUILD_DIR/bootloader.bin
 KERNEL_BIN=$BUILD_DIR/kernel.bin
+# --- C kernel toolchain + intermediate objects ---
+KERNEL_DIR=$SRC_DIR/kernel
+ENTRY_ASM=$KERNEL_DIR/entry.asm
+KMAIN_C=$KERNEL_DIR/kmain.c
+LINKER_LD=$KERNEL_DIR/linker.ld
+ENTRY_OBJ=$BUILD_DIR/entry.o
+KMAIN_OBJ=$BUILD_DIR/kmain.o
+KERNEL_ELF=$BUILD_DIR/kernel.elf
+CC=i686-elf-gcc
+LD=i686-elf-ld
+OBJCOPY=i686-elf-objcopy
+CFLAGS="-ffreestanding -m32 -fno-stack-protector -Wall -Wextra"
 IMG=$BUILD_DIR/main_floppy.img
 LOGDIR=$BUILD_DIR/debug
-SHOT=$LOGDIR/screen.png
-LOGS_DIR=$LOGDIR/logs          # per-run rotated qemu traces live here
-COUNTER_FILE=$LOGS_DIR/.counter
-RECENT=$LOGS_DIR/recent.log    # symlink -> newest run's trace
-KEEP_LOGS=20                   # prune older runs beyond this many
-RUN_LOG=                       # set per run by alloc_run_log
+BOOT_LST=$BUILD_DIR/bootloader.lst
+KERNEL_LST=$BUILD_DIR/kernel.lst
+BOOT_ORG=0x7C00                 # bootloader link/load address (org)
+KERNEL_ORG=0x7E00              # kernel link/load address (org)
+RUNS_DIR=$LOGDIR/runs          # per-run archive folders (RUN#####/) - kept forever
+COUNTER_FILE=$LOGDIR/logs/.counter   # persistent run counter (continues old numbering)
+RECENT=$RUNS_DIR/recent        # symlink -> newest run's folder
+TRACE_DIR=$ROOT/scripts/trace  # symbols.py / gdbdrive.py / debrief.py
+# per-run state, set by alloc_run:
+RUN_ID= ; RUN_STAMP= ; RUN_MODE= ; RUNDIR= ; RUN_RAW=
 
 MODE=window                 # default: build + validate + visible QEMU window
 for a in "$@"; do
@@ -62,7 +78,7 @@ die()  { printf '\n%sBuild stopped: %s%s\n' "$R" "$1" "$N"; exit 1; }
 # ---------------------------------------------------------------------------
 step "Checking required tools"
 missing=
-for t in nasm dd mkfs.fat mcopy minfo qemu-system-i386 python3 xxd; do
+for t in nasm i686-elf-gcc i686-elf-ld i686-elf-objcopy dd mkfs.fat mcopy minfo qemu-system-i386 gdb python3 xxd; do
   if command -v "$t" >/dev/null 2>&1; then
     ok "$t"
   else
@@ -76,7 +92,10 @@ done
 assemble() { # $1=src  $2=out  $3=label
   step "Assembling $3 ($1)"
   mkdir -p "$BUILD_DIR"
-  err=$(nasm "$1" -f bin -o "$2" 2>&1); rc=$?
+  # -l emits a listing (addr/bytecode per line) that the tracer turns into a
+  # label->address map, so breakpoints are named, not hand-counted offsets.
+  lst="${2%.bin}.lst"
+  err=$(nasm "$1" -f bin -o "$2" -l "$lst" 2>&1); rc=$?
   if [ "$rc" -ne 0 ]; then
     bad "nasm failed:"
     printf '%s\n' "$err" | sed 's/^/      /'
@@ -95,8 +114,41 @@ assemble() { # $1=src  $2=out  $3=label
   fi
   ok "$2 ($(wc -c < "$2" | tr -d ' ') bytes)"
 }
+# build_kernel_c: entry.asm (-f elf32) + kmain.c (freestanding) -> ld -> objcopy.
+# The bootloader stays a flat binary; the kernel is now compiled+linked C.
+build_kernel_c() {
+  step "Building kernel (asm entry + C)"
+  for t in "$CC" "$LD" "$OBJCOPY"; do
+    command -v "$t" >/dev/null 2>&1 || { bad "$t not found - install the i686-elf cross toolchain"; die "kernel build failed"; }
+  done
+  # 1. entry stub -> LINKABLE object (not flat bin); listing feeds the tracer
+  err=$(nasm "$ENTRY_ASM" -f elf32 -o "$ENTRY_OBJ" -l "$KERNEL_LST" 2>&1) \
+    && ok "entry.asm -> $(basename "$ENTRY_OBJ")" \
+    || { bad "nasm (entry.asm) failed:"; printf '%s\n' "$err" | sed 's/^/      /'; die "kernel build failed"; }
+  # 2. compile EVERY freestanding C source in the kernel dir (no libc/host headers)
+  KOBJS=""
+  found_c=0
+  for cfile in "$KERNEL_DIR"/*.c; do
+    [ -e "$cfile" ] || break            # nothing matched the glob
+    found_c=1
+    cobj="$BUILD_DIR/$(basename "${cfile%.c}").o"
+    err=$($CC $CFLAGS -c "$cfile" -o "$cobj" 2>&1); rc=$?
+    { [ "$rc" -eq 0 ] && ok "$(basename "$cfile") -> $(basename "$cobj")"; } \
+      || { bad "$CC ($(basename "$cfile")) failed:"; printf '%s\n' "$err" | sed 's/^/      /'; die "kernel build failed"; }
+    KOBJS="$KOBJS $cobj"
+  done
+  [ "$found_c" -eq 1 ] || { bad "no C sources in $KERNEL_DIR - write your C kernel first"; die "kernel build failed"; }
+  # 3. link entry stub + all C objects at 0x7E00 per linker.ld (ELF keeps symbols)
+  err=$($LD -T "$LINKER_LD" "$ENTRY_OBJ" $KOBJS -o "$KERNEL_ELF" 2>&1) \
+    && ok "linked -> $(basename "$KERNEL_ELF")" \
+    || { bad "$LD failed:"; printf '%s\n' "$err" | sed 's/^/      /'; die "kernel build failed"; }
+  # 4. flatten to the raw image the bootloader loads
+  $OBJCOPY -O binary "$KERNEL_ELF" "$KERNEL_BIN" \
+    && ok "$(basename "$KERNEL_BIN") ($(wc -c < "$KERNEL_BIN" | tr -d ' ') bytes)" \
+    || { bad "objcopy failed"; die "kernel build failed"; }
+}
 assemble "$BOOT_ASM" "$BOOT_BIN" "bootloader"
-assemble "$KERNEL_ASM" "$KERNEL_BIN" "kernel"
+build_kernel_c
 
 # ---------------------------------------------------------------------------
 step "Building floppy image"
@@ -187,67 +239,134 @@ if command -v minfo >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
-# Per-run rotated QEMU traces (build/debug/logs/).
-#   alloc_run_log <mode> -> qemu-int-<DD-MM-YYYY-HH:MMam/pm>-RUN#####.log,
-#                           bumps a persistent counter, sets $RUN_LOG.
-#   finalize_run_log     -> prepend a header, point recent.log at it, prune.
-#   parse_resets         -> console verdict (healthy vs triple-fault loop).
-# Baseline (measured): healthy boot = 2 startup resets; a loop = dozens. Flag >=5.
+# Per-run DEEP trace subsystem (build/debug/runs/RUN#####/).
+#
+# `qemu -d int` does NOT log real-mode software interrupts, so the disk reads,
+# A20 negotiation and BIOS prints are invisible in a plain trace. We drive QEMU
+# under GDB and breakpoint named milestones (resolved from the nasm listings)
+# to capture what the hardware was actually asked to do - e.g. the true sector
+# count handed to INT 13h. debrief.py then turns each run into a permanent,
+# dissectable record. Every run is kept forever; nothing is pruned.
+#
+#   alloc_run <mode>  -> bump the persistent counter, make RUN#####/ folder.
+#   deep_capture      -> QEMU+GDB milestone capture -> raw.log/gdb-events.jsonl,
+#                        then debrief.py -> annotated.log/debrief.md/meta.json.
+#   report_run        -> console headline (verdict, sector read, paths).
+# Baseline (measured): healthy boot = 2 startup resets; a loop = dozens.
 # ---------------------------------------------------------------------------
-alloc_run_log() {   # $1 = mode label
-  mkdir -p "$LOGS_DIR"
+have_qemu() { command -v qemu-system-i386 >/dev/null 2>&1; }
+have_gdb()  { command -v gdb >/dev/null 2>&1; }
+
+alloc_run() {   # $1 = mode label -> sets RUN_ID/RUN_STAMP/RUN_MODE/RUNDIR/RUN_RAW
+  mkdir -p "$RUNS_DIR" "$(dirname "$COUNTER_FILE")"
   n=0; [ -f "$COUNTER_FILE" ] && n=$(cat "$COUNTER_FILE" 2>/dev/null)
   case "$n" in ''|*[!0-9]*) n=0 ;; esac
   n=$((n + 1)); printf '%s\n' "$n" > "$COUNTER_FILE"
   RUN_ID=$(printf 'RUN%05d' "$n")
   RUN_STAMP=$(date +'%d-%m-%Y-%I:%M%p')
   RUN_MODE=$1
-  RUN_LOG="$LOGS_DIR/qemu-int-$RUN_STAMP-$RUN_ID.log"
+  RUNDIR="$RUNS_DIR/$RUN_ID"
+  RUN_RAW="$RUNDIR/raw.log"
+  mkdir -p "$RUNDIR"
 }
 
-finalize_run_log() {
-  [ -f "$RUN_LOG" ] || return 0
-  resets=$(grep -c -i 'CPU Reset' "$RUN_LOG" 2>/dev/null); [ -z "$resets" ] && resets=0
-  verdict="healthy"; [ "$resets" -ge 5 ] && verdict="TRIPLE-FAULT / reboot loop"
-  firstexc=$(grep -m1 -E 'v=0[0-9a-f] ' "$RUN_LOG" 2>/dev/null)
-  tmp="$RUN_LOG.hdr"
-  {
-    printf '=========================================================================\n'
-    printf ' 908 OS  --  QEMU trace  --  %s\n' "$RUN_ID"
-    printf '   when    : %s\n' "$RUN_STAMP"
-    printf '   mode    : %s\n' "$RUN_MODE"
-    printf '   image   : %s\n' "$IMG"
-    printf '   resets  : %s   (2 = healthy, >=5 = triple-fault loop)\n' "$resets"
-    printf '   verdict : %s\n' "$verdict"
-    [ -n "$firstexc" ] && printf '   1st exc : %s\n' "$firstexc"
-    printf '=========================================================================\n\n'
-    cat "$RUN_LOG"
-  } > "$tmp" && mv "$tmp" "$RUN_LOG"
-  ln -sf "$(basename "$RUN_LOG")" "$RECENT"
-  # rotate: keep only the newest $KEEP_LOGS traces
-  ls -1t "$LOGS_DIR"/qemu-int-*.log 2>/dev/null | tail -n +"$((KEEP_LOGS + 1))" | \
-    while IFS= read -r old; do rm -f "$old"; done
+write_context() {   # emit RUNDIR/context.json consumed by debrief.py
+  cat > "$RUNDIR/context.json" <<EOF
+{
+  "run_id": "$RUN_ID",
+  "run_stamp": "$RUN_STAMP",
+  "run_mode": "$RUN_MODE",
+  "image": "$IMG",
+  "boot_bin": "$BOOT_BIN",
+  "kernel_bin": "$KERNEL_BIN",
+  "boot_src": "$BOOT_ASM",
+  "host": "$(uname -sr)",
+  "qemu_ver": "$(qemu-system-i386 --version 2>/dev/null | head -1)",
+  "gdb_ver": "$(gdb --version 2>/dev/null | head -1)",
+  "nasm_ver": "$(nasm -v 2>/dev/null)"
+}
+EOF
 }
 
-parse_resets() {
-  if [ -s "$RUN_LOG" ]; then
-    resets=$(grep -c -i 'CPU Reset' "$RUN_LOG" 2>/dev/null); [ -z "$resets" ] && resets=0
-    if [ "$resets" -ge 5 ]; then
-      bad "CPU reset ${resets}x - reboot loop, almost certainly a triple fault"
-      printf '  %s(bad jump/GDT/stack, or a fault with no handler).%s\n' "$DIM" "$N"
-      printf '  %sfirst exception in trace:%s\n' "$DIM" "$N"
-      grep -m1 -E 'v=0[0-9a-f] ' "$RUN_LOG" 2>/dev/null | sed 's/^/      /'
-    else
-      ok "no reboot loop (${resets} startup resets, baseline is 2)"
-    fi
-    printf '  %strace : %s%s\n' "$DIM" "$RUN_LOG" "$N"
-    printf '  %srecent: %s (-> %s)%s\n' "$DIM" "$RECENT" "$(basename "$RUN_LOG")" "$N"
+# deep_capture: run QEMU under GDB, capture milestones + a pristine raw trace,
+# then debrief. Per design, GDB *tooling* breakage is a HARD FAIL (surfaced
+# loudly); a merely-broken boot is captured as a finding, not fatal.
+deep_capture() {
+  # 1. symbol map: bootloader/entry labels from the NASM listings, plus the C
+  #    kernel symbols (kmain) and the for(;;) spin address pulled from the ELF.
+  if ! python3 "$TRACE_DIR/symbols.py" \
+        "$BOOT_LST:$BOOT_ORG" "$KERNEL_LST:$KERNEL_ORG" \
+        --elf "$KERNEL_ELF" \
+        > "$RUNDIR/syms.json" 2>"$RUNDIR/symbols.err"; then
+    bad "symbol map failed:"; sed 's/^/      /' "$RUNDIR/symbols.err"
+    die "cannot build symbol map"
+  fi
+
+  # 2. launch QEMU halted (-S) with a gdbstub on a PID-derived port
+  port=$(( 40000 + ($$ % 20000) ))
+  qemu-system-i386 \
+    -drive file="$IMG",format=raw,if=floppy -boot a \
+    -d int,cpu_reset -D "$RUN_RAW" \
+    -S -gdb "tcp::$port" -display none >/dev/null 2>"$RUNDIR/qemu.err" &
+  QPID=$!
+
+  # 3. wait for the gdbstub port to accept before connecting
+  if command -v ss >/dev/null 2>&1; then
+    i=0; while [ $i -lt 50 ]; do
+      ss -ltn 2>/dev/null | grep -q ":$port " && break
+      sleep 0.1; i=$((i + 1))
+    done
   else
-    warn "no QEMU trace captured"
+    sleep 1
+  fi
+
+  # 4. drive under GDB (batch). Non-zero exit == tooling failure -> hard fail.
+  GDBDRIVE_PORT="$port" \
+  GDBDRIVE_SYMS="$RUNDIR/syms.json" \
+  GDBDRIVE_OUT="$RUNDIR/gdb-events.jsonl" \
+  GDBDRIVE_HEAVY=1 \
+    timeout 60 gdb -q -batch -x "$TRACE_DIR/gdbdrive.py" \
+      >"$RUNDIR/gdb.out" 2>"$RUNDIR/gdb.err"
+  grc=$?
+  kill "$QPID" 2>/dev/null; wait "$QPID" 2>/dev/null
+
+  if [ "$grc" -ne 0 ]; then
+    bad "GDB deep-capture FAILED (exit $grc) - the deep trace is broken:"
+    tail -20 "$RUNDIR/gdb.err" | sed 's/^/      /'
+    die "gdb tooling failure (full stderr in $RUNDIR/gdb.err)"
+  fi
+
+  # 5. debrief: annotated.log + debrief.md + meta.json + INDEX append
+  write_context
+  if ! python3 "$TRACE_DIR/debrief.py" "$RUNDIR" "$RUNDIR/context.json" \
+        > "$RUNDIR/verdict.txt" 2>"$RUNDIR/debrief.err"; then
+    bad "debrief failed:"; sed 's/^/      /' "$RUNDIR/debrief.err"
+    die "debrief.py failure"
+  fi
+  ln -sfn "$RUN_ID" "$RECENT"
+}
+
+report_run() {
+  verdict=$(cat "$RUNDIR/verdict.txt" 2>/dev/null)
+  case "$verdict" in HEALTHY*) ok "$verdict" ;; *) bad "$verdict" ;; esac
+  sect=$(python3 -c "import json;r=(json.load(open('$RUNDIR/meta.json')).get('sector_read') or {});print('%s %s sector(s) from LBA33 -> %s'%(r.get('op','?'),r.get('sectors','?'),r.get('dest','?')))" 2>/dev/null)
+  [ -n "$sect" ] && printf '  %sdisk   : %s%s\n' "$DIM" "$sect" "$N"
+  printf '  %sdebrief: %s/debrief.md%s\n' "$DIM" "$RUNDIR" "$N"
+  printf '  %sraw    : %s/raw.log  (annotated: %s/annotated.log)%s\n' "$DIM" "$RUNDIR" "$RUNDIR" "$N"
+  printf '  %srecent : %s -> %s%s\n' "$DIM" "$RECENT" "$RUN_ID" "$N"
+}
+
+capture_screenshot() {   # separate short run -> screen.png in the run folder
+  ppm="$RUNDIR/screen.ppm"; png="$RUNDIR/screen.png"
+  ( sleep 3; printf 'screendump %s\n' "$ppm"; sleep 1; printf 'quit\n' ) | \
+    timeout 12 qemu-system-i386 \
+      -drive file="$IMG",format=raw,if=floppy -boot a \
+      -display none -monitor stdio >/dev/null 2>&1
+  if [ -f "$ppm" ] && command -v python3 >/dev/null 2>&1; then
+    python3 -c "from PIL import Image; Image.open('$ppm').save('$png')" 2>/dev/null \
+      && ok "screenshot: $png" || warn "could not render screenshot (PIL missing?)"
   fi
 }
-
-have_qemu() { command -v qemu-system-i386 >/dev/null 2>&1; }
 
 case "$MODE" in
   makeonly)
@@ -255,25 +374,14 @@ case "$MODE" in
     ;;
 
   headless)
-    if have_qemu; then
-      step "QEMU smoke test (headless, ~3s)"
-      mkdir -p "$LOGDIR"; alloc_run_log headless
-      ( sleep 3; printf 'screendump %s\n' "$LOGDIR/screen.ppm"; sleep 1; printf 'quit\n' ) | \
-        timeout 12 qemu-system-i386 \
-          -drive file="$IMG",format=raw,if=floppy -boot a \
-          -d int,cpu_reset -D "$RUN_LOG" \
-          -display none -monitor stdio >/dev/null 2>&1
-      finalize_run_log
-      if [ -f "$LOGDIR/screen.ppm" ] && command -v python3 >/dev/null 2>&1; then
-        if python3 -c "from PIL import Image; Image.open('$LOGDIR/screen.ppm').save('$SHOT')" 2>/dev/null; then
-          ok "screenshot saved: $SHOT"
-        else
-          warn "could not render screenshot (python PIL not installed?)"
-        fi
-      fi
-      parse_resets
+    if have_qemu && have_gdb; then
+      step "Deep trace capture (headless, GDB-driven)"
+      alloc_run headless
+      deep_capture
+      capture_screenshot
+      report_run
     else
-      warn "qemu-system-i386 not found - skipping headless test"
+      warn "deep trace needs both qemu-system-i386 and gdb - skipping"
     fi
     ;;
 
@@ -281,17 +389,17 @@ case "$MODE" in
     # Static checks must pass before we hand you an interactive window.
     if [ "$FAILS" -ne 0 ]; then
       warn "static checks failed - not launching QEMU (fix the above first)"
-    elif have_qemu; then
-      step "Launching QEMU window (close it to finish; debug trace is being recorded)"
-      mkdir -p "$LOGDIR"; alloc_run_log window
-      # Visible window AND a full int+reset trace to a per-run txt file.
+    elif have_qemu && have_gdb; then
+      step "Deep trace capture (GDB-driven) - archiving the full record"
+      alloc_run window
+      deep_capture
+      report_run
+      step "Opening QEMU window (close it to finish; trace already archived)"
       qemu-system-i386 \
         -drive file="$IMG",format=raw,if=floppy -boot a \
-        -d int,cpu_reset -D "$RUN_LOG"
-      finalize_run_log   # runs after you close the window
-      parse_resets
+        -d int,cpu_reset -D "$RUNDIR/window-int.log"
     else
-      warn "qemu-system-i386 not found - skipping window"
+      warn "deep trace needs both qemu-system-i386 and gdb - skipping"
     fi
     ;;
 esac
@@ -300,7 +408,10 @@ esac
 echo
 if [ "$FAILS" -eq 0 ]; then
   printf '%s==============  ALL CHECKS PASSED  ==============%s\n' "$G" "$N"
-  [ -f "$SHOT" ] && [ "$MODE" = headless ] && printf 'Look at the running OS here: %s\n' "$SHOT"
+  if [ -n "$RUNDIR" ] && [ -f "$RUNDIR/debrief.md" ]; then
+    printf 'Full run debrief: %s/debrief.md\n' "$RUNDIR"
+    [ -f "$RUNDIR/screen.png" ] && printf 'Screenshot: %s/screen.png\n' "$RUNDIR"
+  fi
   status=0
 else
   printf '%s==========  %d CHECK(S) FAILED  ==========%s\n' "$R" "$FAILS" "$N"
