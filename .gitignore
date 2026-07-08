@@ -4,7 +4,7 @@ build/
 # Logs
 *.log
 
-
+wiki/
 
 # Binaries
 i686-elf-binutils/
