@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include "io.h"
 
+uint32_t segment_offset_to_linear(uint16_t segment, uint16_t offset){
+    return ((uint32_t)segment << 4) + offset;
+}
+
 void sleep_ms(uint32_t ms){
     // 1.193182 Mhz / 1000 Hz = ~1193 ticks per ms
     uint16_t ticks_per_ms = 1193;
