@@ -28,4 +28,6 @@ void console_write(const char *s);                                           /* 
 void console_write_endl(const char *s);                                      /* null-terminated & line ending string */
 void console_write_len(const char *s, size_t n);                             /* explicit length              */
 
+void console_set_cursor(size_t row, size_t col);
+
 #endif /* CONSOLE_H */

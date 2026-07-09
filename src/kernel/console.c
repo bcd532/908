@@ -24,6 +24,11 @@ void console_set_color(uint8_t fg, uint8_t bg) {
     attr = (uint8_t)(fg | (uint8_t)(bg << 4));
 }
 
+void console_set_cursor(size_t row, size_t col){
+    cur_row = row;
+    cur_col = col;
+}
+
 void console_clear(void) {
     for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
         vga[i] = cell(' ', attr);
