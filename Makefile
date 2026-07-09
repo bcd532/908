@@ -31,7 +31,9 @@ $(BUILD_DIR)/bootloader.bin: always
 CC=i686-elf-gcc
 LD=i686-elf-ld
 OBJCOPY=i686-elf-objcopy
-CFLAGS=-ffreestanding -m32 -fno-stack-protector -Wall -Wextra
+# -fno-tree-loop-distribute-patterns: stop GCC turning our mem*() loops into
+# calls to memcpy/memset (i.e. into themselves -> infinite recursion).
+CFLAGS=-ffreestanding -m32 -fno-stack-protector -fno-tree-loop-distribute-patterns -Wall -Wextra
 KERNEL_DIR=$(SRC_DIR)/kernel
 
 # every .c in the kernel dir -> a matching .o in build/
