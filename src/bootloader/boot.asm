@@ -5,13 +5,23 @@
 ; This file is a 512-byte boot sector. It contains the FAT12 BIOS Parameter
 ; Block (BPB) and Extended Boot Record (EBR), followed by the bootloader code.
 ; The BIOS loads this sector at 0x7C00 and begins execution at the first byte.
-;
-org 0x7C00
-bits 16
 
-; Endline Macro
-%define ENDL 0x0D, 0x0A
-%define SECTOR_COUNT 64
+; 
+org 0x7C00 ; bios mandates that the boot sector loads at physical address 0x7C00
+bits 16 ; sends signal to NASM that says "GIVE THE CPU 16 BIT CODE"
+
+
+
+; ----------------------------------------------------------------------------
+; Macros
+; ----------------------------------------------------------------------------
+%define ENDL 0x0D, 0x0A ; END LINE MACRO
+%define SECTOR_COUNT 64 ; SECTOR_COUNT (how many bytes to load (SECTOR_COUNT*512b))
+
+; Skip the BIOS parameter block (BPB)
+jmp short start ; before we can load the bpb, we need to store the drive number and initalize the stack
+nop ; adds an offset to properly load bpb at offset 0x03
+
 
 ; ----------------------------------------------------------------------------
 ; FAT12 BIOS Parameter Block (BPB)
@@ -19,9 +29,6 @@ bits 16
 ; This section is metadata, not code. The CPU does not execute it directly.
 ; The first instruction at the top jumps over this data and into the boot code.
 ; ----------------------------------------------------------------------------
-
-jmp short start    ; skip the BPB and go to the boot code
-nop
 
 bdb_oem:                        db 'MSQIN4.1'           ; 8-byte OEM identifier
 bdb_bytes_per_sector:           dw 512                  ; sector size in bytes
@@ -44,14 +51,16 @@ ebr_drive_number:               db 0                    ; BIOS drive number (flo
 ebr_reserved:                   db 0                    ; reserved byte
 ebr_boot_signature:             db 29h                  ; extended boot signature
 ebr_volume_id:                  db 0h, 9h, 0h, 8h       ; unique 4-byte volume ID
-ebr_volume_label:               db 'NINE ZERO 8'    ; volume label (11 chars)
+ebr_volume_label:               db 'NINE ZERO 8'        ; volume label (11 chars)
 ebr_system_id:                  db 'FAT12   '           ; filesystem type (8 chars)
+
 
 ; ----------------------------------------------------------------------------
 ; Bootloader code
 ; ----------------------------------------------------------------------------
 start:
-    jmp main
+    jmp main    
+    nop
 
 
 ; ---------------------------------------------------------------------------
@@ -113,53 +122,14 @@ check_a20_exit:
     ret
 
 
-%ifdef FORCE_A20_OFF
-; ---------------------------------------------------------------------------
-; disable_a20: TEST HELPER ONLY. Forces the A20 line OFF via the fast-A20 port
-; (0x92) so the detect/enable path can be exercised under QEMU, which otherwise
-; leaves A20 enabled. Compiled in only when nasm is given -dFORCE_A20_OFF.
-; ---------------------------------------------------------------------------
-disable_a20:
-    in al, 0x92
-    and al, 0xFD        ; clear bit 1 (A20 gate); preserve bit 0 (fast reset!)
-    out 0x92, al
-    ret
-%endif
-
-
-
-; ---------------------------------------------------------------------------
-; puts: print a null-terminated string using BIOS teletype output
-; Inputs:
-;   DS:SI = pointer to the string
-; Preserves: AX, SI
-; ---------------------------------------------------------------------------
-puts:
-    push si
-    push ax
-
-.puts_loop:
-    lodsb                   ; load byte at DS:SI into AL, increment SI
-    or al, al               ; set zero flag if AL == 0
-    jz .puts_done
-
-    mov ah, 0x0E            ; BIOS teletype function
-    mov bh, 0               ; display page 0
-    int 0x10
-    jmp .puts_loop
-
-.puts_done:
-    pop ax
-    pop si
-    ret
-
 ; ---------------------------------------------------------------------------
 ; main: bootloader entry point
 ; ---------------------------------------------------------------------------
 main:
     ; Initialize segment registers for simple memory access.
     mov ax, 0
-    mov ds, ax
+    ; we can't set constant data to segment registers so we set ax to 0 to then set the segment registers to ax
+    mov ds, ax 
     mov es, ax
 
     ; Initialize stack.
@@ -172,33 +142,20 @@ main:
 
     ; Load the kernel from the first data sector into memory at 0x7E00.
     mov ax, 33              ; LBA 33 = first data sector (where kernel.bin lives)
-    mov cl, SECTOR_COUNT    ; Reads up to the sector count
-    mov bx, 0x7E00          ; destination: 0x7E00
+    mov cl, SECTOR_COUNT    ; Reads up to the sector count (sector_count x 512b)
+    mov bx, 0x7E00          ; 0x7e00 = first byte after the boot ends
     call disk_read
-
-    mov si, bootloader_success_msg ; print boot loader message
-    call puts
-
-%ifdef FORCE_A20_OFF
-    call disable_a20        ; TEST ONLY: force A20 off (scripts/a20-off-test.sh)
-%endif
 
     call check_a20
     cmp ax, 1
     je .a20_ok
-
-    mov si, a20_notfound_msg
-    call puts
 
     call enable_a20
     call check_a20
     cmp ax, 1               ; check if a20 passed
     jne a20_failed         ; if ax != 1, jump to failure block
 
-
 .a20_ok:
-    mov si, a20_success_msg
-    call puts
     jmp 0x0000:0x7E00       ; hand off to the kernel loaded at 0x7E00
 
 ; ---------------------------------------------------------------------------
@@ -213,13 +170,9 @@ enable_a20:
 ; Error handlers: print a message, then wait for a key and halt.
 ; ---------------------------------------------------------------------------
 floppy_error:
-    mov si, disk_read_failed_msg
-    call puts
     jmp wait_key_and_reboot
 
 a20_failed:
-    mov si, a20_fail_msg
-    call puts
     jmp wait_key_and_reboot
 
 wait_key_and_reboot:
@@ -306,21 +259,12 @@ disk_read:
 ; Uses BIOS INT 13h function AH=0.
 disk_reset:
     pusha
-    mov ah, 0
+    mov ah, 0 
     stc
     int 0x13
     popa
     jc floppy_error
     ret
-
-; ----------------------------------------------------------------------------
-; Data strings
-; ----------------------------------------------------------------------------
-bootloader_success_msg: db '[ok] BOOTLOADER SUCCESSFUL', ENDL, 0
-disk_read_failed_msg: db '[WARNING] READ FROM DISK FAILED !', ENDL, 0
-a20_success_msg: db '[ok] A20 ENABLE SUCCESSFUL', ENDL, 0
-a20_fail_msg: db '[WARNING] A20 ENABLE FAILED !', ENDL, 0 
-a20_notfound_msg: db '[WARNING] A20 NOT FOUND. RETRYING...', ENDL, 0
 
 ; ----------------------------------------------------------------------------
 ; Boot sector padding and signature

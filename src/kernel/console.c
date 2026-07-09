@@ -2,18 +2,30 @@
  * console.c - VGA text-mode console implementation.
  * ==========================================================================*/
 #include "console.h"
+#include "mem.h"
 
 /* Single source of truth for the screen - defined ONCE, nowhere else. */
 #define VGA_ADDR   0xB8000
-#define VGA_WIDTH  80
-#define VGA_HEIGHT 25
-
 static volatile uint16_t *const vga = (uint16_t *)VGA_ADDR;
 
+/* extra vga params*/
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+
 /* All screen state lives here, and only here. */
-static size_t  cur_row;     /* where the next character goes (the "cursor")  */
-static size_t  cur_col;
-static uint8_t attr;        /* current colour byte (fg | bg << 4)            */
+static size_t   cur_row;     /* where the next character goes (the "cursor")  */
+static size_t   cur_col;
+static uint8_t  attr;        /* current colour byte (fg | bg << 4)      */
+
+typedef bool;
+#define true 1
+#define false 0
+
+static bool scroll_enabled = true;
+
+void console_enable_scroll(bool enable){
+    scroll_enabled = enable;
+}
 
 /* Pack a character + colour into one VGA cell. */
 static inline uint16_t cell(char c, uint8_t a) {
@@ -30,8 +42,7 @@ void console_set_cursor(size_t row, size_t col){
 }
 
 void console_clear(void) {
-    for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
-        vga[i] = cell(' ', attr);
+    for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) vga[i] = cell(' ', attr);
     cur_row = 0;
     cur_col = 0;
 }
@@ -41,23 +52,20 @@ void console_init(void) {
     console_clear();
 }
 
-/* Move every visible row up by one and blank the bottom row.
- * (Later this becomes memcpy/memset from libk; inline loops for now so the
- * console has no dependencies yet.) */
+/* Move every visible row up by one and blank the bottom row. */
 static void scroll(void) {
-    for (size_t r = 1; r < VGA_HEIGHT; r++)
-        for (size_t c = 0; c < VGA_WIDTH; c++)
-            vga[(r - 1) * VGA_WIDTH + c] = vga[r * VGA_WIDTH + c];
-    for (size_t c = 0; c < VGA_WIDTH; c++)
-        vga[(VGA_HEIGHT - 1) * VGA_WIDTH + c] = cell(' ', attr);
+    memmove((void*)vga, (void*)(vga + VGA_WIDTH),(VGA_HEIGHT-1)* VGA_WIDTH * sizeof(*vga));
+    for (uint32_t c = 0; c < VGA_WIDTH;c++)vga[(VGA_HEIGHT-1)*VGA_WIDTH + c] = cell(' ', attr);
 }
 
 /* Advance to the start of the next line, scrolling if we ran off the bottom. */
 static void newline(void) {
     cur_col = 0;
     if (++cur_row == VGA_HEIGHT) {
+        if(scroll_enabled){
         scroll();
         cur_row = VGA_HEIGHT - 1;
+        }else cur_row = VGA_HEIGHT -1;
     }
 }
 

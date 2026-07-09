@@ -7,9 +7,9 @@ typedef struct {
 } __attribute__((packed)) idtr_t;
 
 static idtr_t idtr;
-__attribute__((aligned(0x10)))
 
-struct idt_entry_t idt[256]; // create an array of idt entries
+__attribute__((aligned(0x10)))
+static struct idt_entry_t idt[256]; // create an array of idt entries
 
 void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags);
 void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags){
@@ -27,8 +27,6 @@ void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags){
 void idt_init(){
     idtr.limit = sizeof(idt) -1;
     idtr.base = (uint32_t)&idt;
-    __asm__ volatile("lidt %0" : : ""(idtr));
-    
+    __asm__ volatile("lidt %0" : : "m"(idtr));
+
 }
-
-

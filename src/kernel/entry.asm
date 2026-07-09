@@ -12,10 +12,12 @@ start:
     mov ds, ax
     
     lgdt [gdt_descriptor]
+    ; set bit 0 (protected mode enable flag) of control register 0 (cr0) to 1, to put machine in protected mode
     mov eax, cr0
     or eax, 0x1
     mov cr0, eax
-    jmp CODE_SEG:init_pm
+
+    jmp CODE_SEG:init_pm ; CS = GDT entry 1 now
 
 
     
@@ -26,9 +28,10 @@ start:
 ; ----------------------------------------------------------------------------
 gdtable:
     dq 0                    ; null descriptor
+    ; by setting entry 0 to null, any attempt to use a null segment register will be halted via general protection fault
 
     ; 32-bit code segment
-    dw 0xFFFF               ; limit  bits 0-15
+    dw 0xFFFF               ; limit  bits 0-15 
     dw 0x0000               ; base   bits 0-15
     db 0x00                 ; base   bits 16-23
     db 10011010b            ; access: present, ring 0, code, executable, readable

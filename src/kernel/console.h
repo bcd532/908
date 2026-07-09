@@ -8,6 +8,12 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+// define global VGA txt params
+#define VGA_TEXT_WIDTH  80
+#define VGA_TEXT_HEIGHT 25
+
+typedef bool;
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -19,10 +25,12 @@ enum vga_color {
     VGA_LIGHT_RED, VGA_LIGHT_MAGENTA, VGA_YELLOW,    VGA_WHITE,
 };
 
+
+
 void console_init(void);                                                     /* set default colour + clear   */
 void console_clear(void);                                                    /* blank the screen, home cursor */
 void console_set_color(uint8_t fg, uint8_t bg);                              /* colour of subsequent output  */
-
+void console_enable_scroll(bool enable);
 void console_putchar(char c);                                                /* THE primitive - one char     */
 void console_write(const char *s);                                           /* null-terminated string       */
 void console_write_endl(const char *s);                                      /* null-terminated & line ending string */
