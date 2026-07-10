@@ -16,13 +16,13 @@ void utoa(uint32_t val, char *buf, int base){
         i++;
     }
 
-    /* Do a reversal with the given value by making the highest number and the lowest number swap places until
+    /* Do a reversal with the given value by making the most significant number and the least significant number swap places until
     * they meet in the middle and are correctlyy placed */
     int32_t right = i-1;
     while(left < right){             
         char tmp = buf[left];      /* set a temp char to not overwrite & lose buf[left] when buf[right] has to become buf[left] */
 
-        buf[left] = buf[right];          /* current higher value swaps places with the current lowest value */ 
+        buf[left] = buf[right];          /* least significant digit swaps places with the most significant value */ 
         buf[right] = tmp;                /* buf[right] becomes buf[left] */
 
         left++;right--;                
