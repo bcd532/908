@@ -1,32 +1,40 @@
 #include <stdint.h>
 #include "idt.h"
 
+
+/* Sets up a struct for the whole address of the IDTR */
 typedef struct {
     uint16_t limit;
     uint32_t base;
 } __attribute__((packed)) idtr_t;
 
-static idtr_t idtr;
+/* Initialize the IDTR statically to avoid it sitting on the temporary function stack (prevents stack corruption, undefined behavior
+ * and gurantees absolte memory reference for the assmebler) */
+static idtr_t idtr; 
 
-__attribute__((aligned(0x10)))
-static struct idt_entry_t idt[256]; // create an array of idt entries
+/**/ 
+__attribute__((aligned(0x10))) /* forces the array to land on a 16-byte boundary to avoid cache line splits */
+static struct idt_entry_t idt[255]; /* init 256 arrays of idt gates */
 
-void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags);
+
 void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags){
-    struct idt_entry_t* descriptor = &idt[vector];
 
-    descriptor->isr            = (uint32_t)isr & 0xFFFF;
-    descriptor->kernel_cs      = 0x08;
-    descriptor->ist            = 0;
-    descriptor->attributes     = flags;
-    descriptor->isr_offset     = ((uint32_t)isr >> 16)& 0xFFFF;
+    struct idt_entry_t* descriptor      = &idt[vector];                      /* sets up the descriptor for the given interrupt vector */
+
+    descriptor->offset_s0e15            = (uint32_t)isr & 0xFFFF;            /* sets offset 1 (bits 0->15) to the given ISR's lower 16 bits */
+    descriptor->selector                = 0x08;                              /* sets the selector to the code segment 0x08 */
+    descriptor->zero_slot               = 0;                                 /* sets the zero slot */
+    descriptor->attributes              = flags;                             /* sets the attributes to the given flags*/
+    descriptor->offset_s16e31           = ((uint32_t)isr >> 16)& 0xFFFF;     /* sets offset 2 (bits 16->31) to the given ISR's lower 32 bits */
 }
 
 
 
 void idt_init(){
-    idtr.limit = sizeof(idt) -1;
-    idtr.base = (uint32_t)&idt;
-    __asm__ volatile("lidt %0" : : "m"(idtr));
+    idtr.limit = sizeof(idt) -1; /* sets the size of the idt descriptor to 31bits */
+    idtr.base = (uint32_t)&idt;  /* sets the address to the idt descriptor */
+    __asm__ volatile( "lidt %0"
+                      : 
+                      : "m"(idtr)); /* loads the idt at the given idt descriptor */
 
 }
