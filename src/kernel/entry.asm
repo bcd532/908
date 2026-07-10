@@ -7,11 +7,14 @@ extern __bss_end
 
 
 start:
+    ; clear interrupts and set the data segment
     cli
     xor ax, ax
     mov ds, ax
-    
+   
+    ; load the gdt
     lgdt [gdt_descriptor]
+
     ; set bit 0 (protected mode enable flag) of control register 0 (cr0) to 1, to put machine in protected mode
     mov eax, cr0
     or eax, 0x1
@@ -47,17 +50,20 @@ gdtable:
     db 0x00                 ; base   bits 24-31
 
 gdt_descriptor:
-    dw gdt_descriptor - gdtable - 1    ; limit: size of the table, minus 1
+    dw gdt_descriptor - gdtable - 1     ; limit: size of the table, minus 1
     dd gdtable                          ; base:  linear address of the table
 
-; A selector is the descriptor's byte offset into the GDT (index << 3).
 CODE_SEG equ 0x08
 DATA_SEG equ 0x10
 
 
+; -----------ENTERING 32 BIT MODE-------------------------
+; Send a message to NASM telling it to begin using 32 bits
+; --------------------------------------------------------
 [bits 32]
 
 init_pm:
+    ; set all selectors to the data segment to clear old data
     mov ax, DATA_SEG
     mov ds, ax
     mov ss, ax
@@ -65,14 +71,18 @@ init_pm:
     mov fs, ax
     mov gs, ax
 
-    mov esp, 0x90000
+    mov esp, 0x90000 ; initalize the stack for the kernel in 32-bit mode at linear address 0x90000
 
-    cld
-    mov edi, __bss_start
+    cld ; clear the direction flag and begin counting up
+
+    ; count from the start to the end of the memory address of BSS in bytes
+    mov edi, __bss_start 
     mov ecx, __bss_end
-    sub ecx, edi
-    xor eax, eax
-    rep stosb
+    
+    
+    sub ecx, edi ; ecx = total size of BSS in bytes
+    xor eax, eax ; eax = 0
+    rep stosb    ; repeatedly pushes 0's to the address of edi (BSS), ecx times (total size of BSS) to clear every BSS before calling the kernel
 
     call kmain
 
