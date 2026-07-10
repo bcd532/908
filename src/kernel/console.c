@@ -17,9 +17,6 @@ static size_t   cur_row;     /* where the next character goes (the "cursor")  */
 static size_t   cur_col;
 static uint8_t  attr;        /* current colour byte (fg | bg << 4)      */
 
-typedef bool;
-#define true 1
-#define false 0
 
 static bool scroll_enabled = true;
 

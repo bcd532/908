@@ -12,10 +12,9 @@
 #define VGA_TEXT_WIDTH  80
 #define VGA_TEXT_HEIGHT 25
 
-typedef bool;
-
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 /* VGA text colours: low nibble = foreground, high nibble = background. */
 enum vga_color {
