@@ -25,16 +25,14 @@ enum vga_color {
 };
 
 
+void KCONSOLE_VGA_PUTCHAR(char c);                          /* PRIMITIVE: Sets one character on the screen, catches right edge fall-off */
 
-void console_init(void);                                                     /* set default colour + clear   */
-void console_clear(void);                                                    /* blank the screen, home cursor */
-void console_set_color(uint8_t fg, uint8_t bg);                              /* colour of subsequent output  */
-void console_enable_scroll(bool enable);
-void console_putchar(char c);                                                /* THE primitive - one char     */
-void console_write(const char *s);                                           /* null-terminated string       */
-void console_write_endl(const char *s);                                      /* null-terminated & line ending string */
-void console_write_len(const char *s, size_t n);                             /* explicit length              */
-
-void console_set_cursor(size_t row, size_t col);
+void KCONSOLE_VGA_INIT(void);                               /* sets kernel console color and clears screen */
+void KCONSOLE_VGA_CLEAR(void);                              /* clears the screen of visible text and sets cursor to row 0, col 0 of the VGA console */
+void KCONSOLE_VGA_SETCOLOR(uint8_t fg, uint8_t bg);         /* colour of subsequent output   */
+void KCONSOLE_VGA_ENABLE_SCROLL(bool enable);               /* move visible row up by one and blank bottom row */
+void KCONSOLE_VGA_WRITE(const char *s);                     /* null-terminated string        */
+void KCONSOLE_VGA_WRITELEN(const char *s, size_t n);        /* explicit length               */
+void KCONSOLE_VGA_SETCURSOR(size_t row, size_t col);
 
 #endif /* CONSOLE_H */
