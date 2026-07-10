@@ -1,16 +1,12 @@
 /* ============================================================================
- * console.h - VGA text-mode console (the kernel's screen output).
+ * kvgacon.h - VGA text-mode console (the kernel's screen output).
  *
  * Owns ALL screen state (cursor position, colour) in one place, and exposes a
- * single character primitive - console_putchar - that everything else composes
+ * single character primitive - KCONSOLE_VGA_PUTCHAR - that everything else composes
  * on. Handles newlines, line wrapping, and scrolling.
  * ==========================================================================*/
-#ifndef CONSOLE_H
-#define CONSOLE_H
-
-// define global VGA txt params
-#define VGA_TEXT_WIDTH  80
-#define VGA_TEXT_HEIGHT 25
+#ifndef KVGACON_H
+#define KVGACON_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -35,4 +31,4 @@ void KCONSOLE_VGA_WRITE(const char *s);                     /* null-terminated s
 void KCONSOLE_VGA_WRITELEN(const char *s, size_t n);        /* explicit length               */
 void KCONSOLE_VGA_SETCURSOR(size_t row, size_t col);
 
-#endif /* CONSOLE_H */
+#endif /* KVGACON_H */
