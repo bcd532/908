@@ -21,7 +21,7 @@ void kmain(void) {
     kprintf("OUTPUT STRING: %s\n", dbg_S);
     kprintf("OUTPUT HEX ADDRESS: %x\n", dbg_16b);
     kprintf("OUTPUT UINT32: %u\n", dbg_uint);
-    kprintf("OUTPUT: %%");
+    kprintf("OUTPUT: 100%");
     
     KCONSOLE_VGA_SETCURSOR(9,9);
     KCONSOLE_VGA_WRITE("OK")    ;
