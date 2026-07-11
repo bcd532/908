@@ -45,13 +45,8 @@ void kprintf(const char *fmt, ...){
          else if(next == '%'){
             KCONSOLE_VGA_PUTCHAR('%');
             i++;
-         }
-
-        
+         }else {KCONSOLE_VGA_PUTCHAR('%');}
     }
+
     va_end(args);
-
-    
-
-    
 }
