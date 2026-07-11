@@ -1,5 +1,6 @@
 #include "kprintf.h"
 #include <stdarg.h>
+#include <stdint.h>
 #include "itoa.h"
 #include "kvgacon.h"
 
@@ -23,11 +24,28 @@ void kprintf(const char *fmt, ...){
              KCONSOLE_VGA_WRITE(va_arg(args, const char *));
              i++;
          }
-         else if(next == 'd'){}
-         else if(next == 'x'){}
-         else if(next == 'c'){}
-         else if(next == 'u'){}
-         else if(next == '%'){}
+         else if(next == 'x'){
+            uint32_t tmpval = va_arg(args, uint32_t);
+            utoa(tmpval, buf, 16);
+            KCONSOLE_VGA_WRITE(buf);
+            i++;
+         }
+         else if(next == 'c'){
+            uint32_t tmpval = va_arg(args, uint32_t);
+            char rchar = (char)tmpval;
+            KCONSOLE_VGA_PUTCHAR(rchar);
+            i++;
+         }
+         else if(next == 'u'){
+            uint32_t tmpval = va_arg(args, uint32_t);
+            utoa(tmpval, buf, 10);
+            KCONSOLE_VGA_WRITE(buf);
+            i++;
+         }
+         else if(next == '%'){
+            KCONSOLE_VGA_PUTCHAR('%');
+            i++;
+         }
 
         
     }
