@@ -48,8 +48,12 @@ $(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.c always
 $(BUILD_DIR)/entry.o: $(KERNEL_DIR)/entry.asm always
 	$(ASM) $(KERNEL_DIR)/entry.asm -f elf32 -o $(BUILD_DIR)/entry.o
 
-$(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/entry.o $(KERNEL_OBJ)
-	$(LD) -T $(KERNEL_DIR)/linker.ld $(BUILD_DIR)/entry.o $(KERNEL_OBJ) -o $(BUILD_DIR)/kernel.elf
+# ISR stubs + isr_stub_table (32-bit; NASM defaults BITS 32 for -f elf32)
+$(BUILD_DIR)/macros.o: $(KERNEL_DIR)/macros.asm always
+	$(ASM) $(KERNEL_DIR)/macros.asm -f elf32 -o $(BUILD_DIR)/macros.o
+
+$(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/entry.o $(BUILD_DIR)/macros.o $(KERNEL_OBJ)
+	$(LD) -T $(KERNEL_DIR)/linker.ld $(BUILD_DIR)/entry.o $(BUILD_DIR)/macros.o $(KERNEL_OBJ) -o $(BUILD_DIR)/kernel.elf
 	$(OBJCOPY) -O binary $(BUILD_DIR)/kernel.elf $(BUILD_DIR)/kernel.bin
 
 #

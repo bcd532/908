@@ -14,7 +14,7 @@ static idtr_t idtr;
 
 /**/ 
 __attribute__((aligned(0x10))) /* forces the array to land on a 16-byte boundary to avoid cache line splits */
-static struct idt_entry_t idt[255]; /* init 256 arrays of idt gates */
+static struct idt_entry_t idt[256]; /* init 256 arrays of idt gates */
 
 
 void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags){
