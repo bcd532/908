@@ -13,5 +13,6 @@ struct idt_entry_t{
     uint16_t offset_s16e31;              /* offset bits 16->31 */
 } __attribute__((packed));
 
+void idt_init(void);
 
 #endif

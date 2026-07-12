@@ -2,6 +2,8 @@
 #include "idt.h"
 
 
+extern void *isr_stub_table[];
+
 /* Sets up a struct for the whole address of the IDTR */
 typedef struct {
     uint16_t limit;
@@ -33,6 +35,7 @@ void idt_set_descriptor(uint8_t vector, void* isr, uint8_t flags){
 void idt_init(){
     idtr.limit = sizeof(idt) -1; /* sets the size of the idt descriptor to 31bits */
     idtr.base = (uint32_t)&idt;  /* sets the address to the idt descriptor */
+    for (int v = 0; v < 32; v++) idt_set_descriptor(v, isr_stub_table, 0x8E);
     __asm__ volatile( "lidt %0"
                       : 
                       : "m"(idtr)); /* loads the idt at the given idt descriptor */
