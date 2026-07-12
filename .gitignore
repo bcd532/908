@@ -12,4 +12,4 @@ i686-elf-binutils/
 
 # Local editor / tooling state
 .claude/
-scripts/
+bscripts/
