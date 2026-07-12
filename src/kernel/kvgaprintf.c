@@ -1,10 +1,10 @@
-#include "kprintf.h"
+#include "kvgaprintf.h"
 #include <stdarg.h>
 #include <stdint.h>
 #include "itoa.h"
 #include "kvgacon.h"
 
-void kprintf(const char *fmt, ...){
+void kvgaprintf(const char *fmt, ...){
     char buf[34];
     va_list args;
 
