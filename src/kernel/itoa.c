@@ -20,7 +20,7 @@ void utoa(uint32_t val, char *buf, int base){
     * they meet in the middle and are correctlyy placed */
     int32_t right = i-1;
     while(left < right){             
-        char tmp = buf[left];      /* set a temp char to not overwrite & lose buf[left] when buf[right] has to become buf[left] */
+        char tmp = buf[left];      /* set a temp char to not overwrite & lose buf[left] when buf[left] has to become buf[right] */
 
         buf[left] = buf[right];          /* least significant digit swaps places with the most significant value */ 
         buf[right] = tmp;                /* buf[right] becomes buf[left] */
