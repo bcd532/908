@@ -1,5 +1,6 @@
 #include <stdbool.h>
-
+#include <stdint.h>
+#include <stddef.h>
 #include "keyb_handler.h"
 #include "io.h"
 #include "kvgaprintf.h"
@@ -48,7 +49,8 @@ static const char kmap_lowercase[128] = {
 
     /* extra special map */
     [0x39] = ' ',
-    [0x0E] = '\b'
+    [0x0E] = '\b',
+    [0x1C] = '\n'
 };
 
 static const char kmap_uppercase[128] = {
@@ -95,12 +97,25 @@ static const char kmap_uppercase[128] = {
 
     /* extra special map */
     [0x39] = ' ',
-    [0x0E] = '\b'
+    [0x0E] = '\b',
+    [0x1C] = '\n'
 
 };
 
 static bool debug = false;
 static bool shifted = false;
+static char line[128];
+static size_t line_len;
+static volatile bool line_ready;
+
+bool keyb_line_ready(void){
+    return line_ready;
+}
+char *keyb_take_line(void){
+    line_ready = false;
+    line_len = 0;
+    return line;
+}
 
 __attribute__((interrupt))
 void keyboard_handler(struct interrupt_frame *frame){
@@ -117,12 +132,25 @@ void keyboard_handler(struct interrupt_frame *frame){
     if (sc == 0x2a || sc == 0x36)           shifted = true;
     else if (sc == 0xAA || sc == 0xB6)      shifted = false;
 
-    /* set current map used based on special key*/
+    /* set current map based on shift state*/
     const char *current_map = shifted ? kmap_uppercase : kmap_lowercase; 
     char c = current_map[sc];
 
 
-    if(c) if (!debug && sc < 0x80) kvgaprintf("%c",c);
+    if(c && !debug && sc < 0x80){
+        if(c == '\n'){
+            line[line_len] = '\0'; 
+            line_ready = true;
+            kvgaprintf("\n");
+        }else if(c == '\b'){
+            if (line_len > 0) { line_len--; kvgaprintf("\b"); }
+        }else {
+            if (line_len < 127){
+            line[line_len++] = c;
+            kvgaprintf("%c", c);
+            }
+        }
+    }
 
-    outb(0x20,0x20); /* send end of instruction */
+    outb(0x20,0x20); /* send end of interrupt (EOI) to the PIC */
 }
