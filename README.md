@@ -1,22 +1,20 @@
-# 908: operating system
+# 908
 
-> Writing 908 to learn more about bare metal architecture, assembly, and c.
+## WHAT IS IT
+908 is an operating system for me to learn more about computers and C. there are really no goals in mind except for it being an environment where everything is my problem.
 
-## goals
+## v0.1.0-alpha
 
-- build a cool operating system
-- figure out usage for neural net at bare metal
-- oddly retro + futuristic graphics like fallout 4
+### WHAT DOES IT HAVE
+- Two-stage boot: bootloader -> kernel on a FAT12 floppy
+- Real mode -> 32-bit protected mdoe
+- Freestanding C kernel (i686-elf toolchain)
+- VGA text console: scrolling, color, cursor
+- IDT + CPU execution handling
+- PIC remap + keyboard driver (scancodes, shift, backspace)
+- Interactive shell: line editing, commands (help, clear)
 
-## how am i going about learning
+### RUN
+`qemu-system-i386 -fda main_floppy.img`
 
-- cpp reference
-- osdev wiki
-
-## use of llm in project
-
-- documentation & information, never code
-
----
-
-<sub>908 bc 808</sub>
+<sub>908 bc 908</sub>
