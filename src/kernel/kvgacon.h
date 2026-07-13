@@ -23,6 +23,7 @@ enum vga_color {
 
 void KCONSOLE_VGA_PUTCHAR(char c);                          /* PRIMITIVE: Sets one character on the screen, catches right edge fall-off */
 
+int KCONSOLE_VGA_GETCURSOR(char type);
 void KCONSOLE_VGA_INIT(void);                               /* sets kernel console color and clears screen */
 void KCONSOLE_VGA_CLEAR(void);                              /* clears the screen of visible text and sets cursor to row 0, col 0 of the VGA console */
 void KCONSOLE_VGA_SETCOLOR(uint8_t fg, uint8_t bg);         /* colour of subsequent output   */

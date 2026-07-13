@@ -38,6 +38,13 @@ void KCONSOLE_VGA_SETCURSOR(size_t row, size_t col){
     cur_col = col;
 }
 
+int KCONSOLE_VGA_GETCURSOR(char type){
+    if (type == 'r')return cur_row;
+    else if (type == 'c')return cur_col;
+    else return 0;
+}
+
+
 void KCONSOLE_VGA_CLEAR(void) {
     for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) vga[i] = cell(' ', attr);
     cur_row = 0;
@@ -71,6 +78,17 @@ static void KCONSOLE_VGA_NEWLINE(void) {
 void KCONSOLE_VGA_PUTCHAR(char c) {
     if (c == '\n') { KCONSOLE_VGA_NEWLINE(); return; }
     if (c == '\r') { cur_col = 0; return; }
+    if (c == '\b') {
+        if (cur_col > 0){
+            cur_col--;
+            vga[cur_row * VGA_WIDTH + cur_col] = cell(' ',attr);
+        }
+        if (cur_row > 0 && cur_col == 0){
+            cur_row--;
+            cur_col = 80;
+        }
+        return;
+    }
 
     vga[cur_row * VGA_WIDTH + cur_col] = cell(c, attr);
     if (++cur_col == VGA_WIDTH)     /* ran off the right edge -> wrap */
