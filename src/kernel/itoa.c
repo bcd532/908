@@ -11,8 +11,7 @@ void utoa(uint32_t val, char *buf, int base){
     while(val != 0){
         uint32_t remainder = val % base;            /* put the remainder divided by the base into a temp var */
         val = val / base;                           /* make the given value now equal the quotient */
-        buf[i] = "0123456789abcdef"[remainder];     /* a string lookup to find what the remainder equals to in asci (chars for addresses )
-                                                            [a haha for me] we use ABCDE all the way to F because addresses cap their lettering at F*/
+        buf[i] = "0123456789abcdef"[remainder];     /* a string lookup to find what the remainder equals to in asci*/
         i++;
     }
 
