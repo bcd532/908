@@ -11,7 +11,7 @@ void sleep_ms(uint32_t ms){
     uint16_t ticks_per_ms = 1193;
 
     while (ms--){
-        // config PIT chhannel 0: mode 0 (interrupt on terminal count)
+        // config PIT channel 0: mode 0 (interrupt on terminal count)
         // sending 0x30 sets access mode to low byte high byte
         outb(0x43, 0x30);
 
