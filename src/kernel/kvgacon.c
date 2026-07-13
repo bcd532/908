@@ -83,9 +83,10 @@ void KCONSOLE_VGA_PUTCHAR(char c) {
             cur_col--;
             vga[cur_row * VGA_WIDTH + cur_col] = cell(' ',attr);
         }
-        if (cur_row > 0 && cur_col == 0){
+        else if (cur_row > 0){
             cur_row--;
-            cur_col = 80;
+            cur_col = VGA_WIDTH -1;
+            vga[cur_row * VGA_WIDTH + cur_col] = cell(' ',attr);
         }
         return;
     }
