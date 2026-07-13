@@ -71,7 +71,7 @@ init_pm:
     mov fs, ax
     mov gs, ax
 
-    mov esp, 0x90000 ; initalize the stack for the kernel in 32-bit mode at linear address 0x90000
+    mov esp, 0x90000 ; initialize the stack for the kernel in 32-bit mode at linear address 0x90000
 
     cld ; clear the direction flag and begin counting up
 
