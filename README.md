@@ -7,10 +7,10 @@
 
 ### WHAT DOES IT HAVE
 - Two-stage boot: bootloader -> kernel on a FAT12 floppy
-- Real mode -> 32-bit protected mdoe
+- Real mode -> 32-bit protected mode
 - Freestanding C kernel (i686-elf toolchain)
 - VGA text console: scrolling, color, cursor
-- IDT + CPU execution handling
+- IDT + CPU exception handling
 - PIC remap + keyboard driver (scancodes, shift, backspace)
 - Interactive shell: line editing, commands (help, clear)
 
