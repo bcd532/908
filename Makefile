@@ -33,7 +33,9 @@ LD=i686-elf-ld
 OBJCOPY=i686-elf-objcopy
 # -fno-tree-loop-distribute-patterns: stop GCC turning our mem*() loops into
 # calls to memcpy/memset (i.e. into themselves -> infinite recursion).
-CFLAGS=-ffreestanding -m32 -fno-stack-protector -fno-tree-loop-distribute-patterns -Wall -Wextra
+# -mgeneral-regs-only: forbid FPU/SSE in kernel code. Required for
+# __attribute__((interrupt)) handlers (an ISR must not touch FP registers).
+CFLAGS=-ffreestanding -m32 -fno-stack-protector -fno-tree-loop-distribute-patterns -mgeneral-regs-only -Wall -Wextra
 KERNEL_DIR=$(SRC_DIR)/kernel
 
 # every .c in the kernel dir -> a matching .o in build/
