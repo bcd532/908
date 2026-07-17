@@ -78,6 +78,16 @@ static void console_newline(void) {
 void console_putchar(char c) {
     if (c == '\n') { console_newline(); return; }
     if (c == '\r') { cur_col = 0; return; }
+    if (c == '\t') { 
+        int8_t tab = 4;
+        if ((cur_col+tab) > VGA_WIDTH){
+            console_newline();
+            return;
+        }else {
+        cur_col = (cur_col+tab) & ~(tab-1); 
+        return;
+        }
+    }
     if (c == '\b') {
         if (cur_col > 0){
             cur_col--;
