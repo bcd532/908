@@ -5,6 +5,10 @@
 #include <cpu/io.h>
 #include <lib/kprintf.h>
 
+#define MAX_LENGTH_SHELL_LINE 128
+#define RELEASE_KEY_SC_MIN 0x80
+
+
 static const char kmap_lowercase[128] = {
 
     /* number map*/
@@ -52,7 +56,8 @@ static const char kmap_lowercase[128] = {
     [0x0E] = '\b',
     [0x1C] = '\n',
     [0x0C] = '-',
-    [0x0D] - '='
+    [0x0D] = '=',
+    [0x0F] = '\t'
 };
 
 static const char kmap_uppercase[128] = {
@@ -108,7 +113,7 @@ static const char kmap_uppercase[128] = {
 
 static bool debug = false;
 static bool shifted = false;
-static char line[128];
+static char line[MAX_LENGTH_SHELL_LINE];
 static size_t line_len;
 static volatile bool line_ready;
 
@@ -128,7 +133,7 @@ void keyboard_handler(struct interrupt_frame *frame){
 
     /* check if in debug and if so only print scan codes*/
     if(debug){
-        if(sc < 0x80)kprintf("[P: %x]",sc);
+        if(sc < RELEASE_KEY_SC_MIN)kprintf("[P: %x]",sc);
         else kprintf("[R: %x]\n", sc);
     }
 
@@ -139,7 +144,7 @@ void keyboard_handler(struct interrupt_frame *frame){
     /* set current map based on shift state*/
     const char *current_map = shifted ? kmap_uppercase : kmap_lowercase; 
     
-    if(!debug && sc < 0x80){
+    if(!debug && sc < RELEASE_KEY_SC_MIN){
         char c = current_map[sc];
         if(c){
             if(c == '\n'){
@@ -149,7 +154,7 @@ void keyboard_handler(struct interrupt_frame *frame){
             }else if(c == '\b'){
                 if (line_len > 0) { line_len--; kprintf("\b"); }
             }else {
-                if (line_len < 127){
+                if (line_len < MAX_LENGTH_SHELL_LINE){
                     line[line_len++] = c;
                     kprintf("%c", c);
                 }
