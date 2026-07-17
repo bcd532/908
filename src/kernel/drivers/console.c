@@ -1,8 +1,8 @@
 /* ============================================================================
- * kvgacon.c - VGA text-mode console implementation.
+ * console.c - VGA text-mode console implementation.
  * ==========================================================================*/
-#include "kvgacon.h"
-#include "mem.h"
+#include <drivers/console.h>
+#include <lib/mem.h>
 
 /* Single source of truth for the screen - defined ONCE, nowhere else. */
 #define VGA_ADDR   0xB8000
@@ -20,7 +20,7 @@ static uint8_t  attr;        /* current colour byte (fg | bg << 4)      */
 
 static bool scroll_enabled = true;
 
-void KCONSOLE_VGA_ENABLE_SCROLL(bool enable){
+void console_enable_scroll(bool enable){
     scroll_enabled = enable;
 }
 
@@ -29,45 +29,45 @@ static inline uint16_t cell(char c, uint8_t a) {
     return ((uint16_t)a << 8) | (uint8_t)c;
 }
 
-void KCONSOLE_VGA_SETCOLOR(uint8_t fg, uint8_t bg) {
+void console_setcolor(uint8_t fg, uint8_t bg) {
     attr = (uint8_t)(fg | (uint8_t)(bg << 4));
 }
 
-void KCONSOLE_VGA_SETCURSOR(size_t row, size_t col){
+void console_setcursor(size_t row, size_t col){
     cur_row = row;
     cur_col = col;
 }
 
-int KCONSOLE_VGA_GETCURSOR(char type){
+int console_getcursor(char type){
     if (type == 'r')return cur_row;
     else if (type == 'c')return cur_col;
     else return 0;
 }
 
 
-void KCONSOLE_VGA_CLEAR(void) {
+void console_clear(void) {
     for (size_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++) vga[i] = cell(' ', attr);
     cur_row = 0;
     cur_col = 0;
 }
 
-void KCONSOLE_VGA_INIT(void) {
-    KCONSOLE_VGA_SETCOLOR(VGA_WHITE, VGA_BLACK);
-    KCONSOLE_VGA_CLEAR();
+void console_init(void) {
+    console_setcolor(VGA_WHITE, VGA_BLACK);
+    console_clear();
 }
 
 /* Move every visible row up by one and blank the bottom row. */
-static void KCONSOLE_VGA_SCROLL(void) {
+static void console_scroll(void) {
     memmove((void*)vga, (void*)(vga + VGA_WIDTH),(VGA_HEIGHT-1)* VGA_WIDTH * sizeof(*vga));
     for (uint32_t c = 0; c < VGA_WIDTH;c++)vga[(VGA_HEIGHT-1)*VGA_WIDTH + c] = cell(' ', attr);
 }
 
 /* Advance to the start of the next line, scrolling if we ran off the bottom. */
-static void KCONSOLE_VGA_NEWLINE(void) {
+static void console_newline(void) {
     cur_col = 0;
     if (++cur_row == VGA_HEIGHT) {
         if(scroll_enabled){
-        KCONSOLE_VGA_SCROLL();
+        console_scroll();
         cur_row = VGA_HEIGHT - 1;
         }else cur_row = VGA_HEIGHT -1;
     }
@@ -75,8 +75,8 @@ static void KCONSOLE_VGA_NEWLINE(void) {
 
 /* The one primitive. Everything that prints goes through here, so wrapping,
  * scrolling and cursor tracking are defined in exactly one place. */
-void KCONSOLE_VGA_PUTCHAR(char c) {
-    if (c == '\n') { KCONSOLE_VGA_NEWLINE(); return; }
+void console_putchar(char c) {
+    if (c == '\n') { console_newline(); return; }
     if (c == '\r') { cur_col = 0; return; }
     if (c == '\b') {
         if (cur_col > 0){
@@ -93,15 +93,15 @@ void KCONSOLE_VGA_PUTCHAR(char c) {
 
     vga[cur_row * VGA_WIDTH + cur_col] = cell(c, attr);
     if (++cur_col == VGA_WIDTH)     /* ran off the right edge -> wrap */
-        KCONSOLE_VGA_NEWLINE();
+        console_newline();
 }
 
-void KCONSOLE_VGA_WRITELEN(const char *s, size_t n) {
+void console_writelen(const char *s, size_t n) {
     for (size_t i = 0; i < n; i++)
-        KCONSOLE_VGA_PUTCHAR(s[i]);
+        console_putchar(s[i]);
 }
 
-void KCONSOLE_VGA_WRITE(const char *s) {
+void console_write(const char *s) {
     for (size_t i = 0; s[i] != '\0'; i++)
-        KCONSOLE_VGA_PUTCHAR(s[i]);
+        console_putchar(s[i]);
 }

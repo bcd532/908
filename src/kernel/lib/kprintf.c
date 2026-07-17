@@ -1,10 +1,10 @@
-#include "kvgaprintf.h"
+#include <lib/kprintf.h>
 #include <stdarg.h>
 #include <stdint.h>
-#include "itoa.h"
-#include "kvgacon.h"
+#include <lib/itoa.h>
+#include <drivers/console.h>
 
-void kvgaprintf(const char *fmt, ...){
+void kprintf(const char *fmt, ...){
     char buf[34];
     va_list args;
 
@@ -14,38 +14,38 @@ void kvgaprintf(const char *fmt, ...){
     for(int i=0; fmt[i] != '\0';i++){   
             
         if(fmt[i] != '%') {
-            KCONSOLE_VGA_PUTCHAR(fmt[i]);
+            console_putchar(fmt[i]);
             continue;
         }
 
         char next = fmt[i+1];
 
          if(next == 's'){
-             KCONSOLE_VGA_WRITE(va_arg(args, const char *));
+             console_write(va_arg(args, const char *));
              i++;
          }
          else if(next == 'x'){
             uint32_t tmpval = va_arg(args, uint32_t);
             utoa(tmpval, buf, 16);
-            KCONSOLE_VGA_WRITE(buf);
+            console_write(buf);
             i++;
          }
          else if(next == 'c'){
             uint32_t tmpval = va_arg(args, uint32_t);
             char rchar = (char)tmpval;
-            KCONSOLE_VGA_PUTCHAR(rchar);
+            console_putchar(rchar);
             i++;
          }
          else if(next == 'u'){
             uint32_t tmpval = va_arg(args, uint32_t);
             utoa(tmpval, buf, 10);
-            KCONSOLE_VGA_WRITE(buf);
+            console_write(buf);
             i++;
          }
          else if(next == '%'){
-            KCONSOLE_VGA_PUTCHAR('%');
+            console_putchar('%');
             i++;
-         }else {KCONSOLE_VGA_PUTCHAR('%');}
+         }else {console_putchar('%');}
     }
 
     va_end(args);

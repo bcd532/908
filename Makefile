@@ -35,27 +35,32 @@ OBJCOPY=i686-elf-objcopy
 # calls to memcpy/memset (i.e. into themselves -> infinite recursion).
 # -mgeneral-regs-only: forbid FPU/SSE in kernel code. Required for
 # __attribute__((interrupt)) handlers (an ISR must not touch FP registers).
-CFLAGS=-ffreestanding -m32 -fno-stack-protector -fno-tree-loop-distribute-patterns -mgeneral-regs-only -Wall -Wextra
 KERNEL_DIR=$(SRC_DIR)/kernel
+# -I$(KERNEL_DIR) makes the angle-bracket includes (<lib/mem.h>, <cpu/idt.h>, ...) resolve
+CFLAGS=-ffreestanding -m32 -fno-stack-protector -fno-tree-loop-distribute-patterns -mgeneral-regs-only -Wall -Wextra -I$(KERNEL_DIR)
+LINKER_LD=$(KERNEL_DIR)/cpu/linker.ld
 
-# every .c in the kernel dir -> a matching .o in build/
-KERNEL_C=$(wildcard $(KERNEL_DIR)/*.c)
-KERNEL_OBJ=$(patsubst $(KERNEL_DIR)/%.c,$(BUILD_DIR)/%.o,$(KERNEL_C))
+# Sources live in subdirs (cpu/ drivers/ lib/ core/); objects stay flat in build/.
+# VPATH lets the pattern rule find a .c by basename in any of those dirs.
+KERNEL_SUBDIRS=$(KERNEL_DIR)/cpu $(KERNEL_DIR)/drivers $(KERNEL_DIR)/lib $(KERNEL_DIR)/core
+vpath %.c $(KERNEL_SUBDIRS)
+KERNEL_C=$(notdir $(wildcard $(addsuffix /*.c,$(KERNEL_SUBDIRS))))
+KERNEL_OBJ=$(patsubst %.c,$(BUILD_DIR)/%.o,$(KERNEL_C))
 
 kernel: $(BUILD_DIR)/kernel.bin
 
-$(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.c always
+$(BUILD_DIR)/%.o: %.c always
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/entry.o: $(KERNEL_DIR)/entry.asm always
-	$(ASM) $(KERNEL_DIR)/entry.asm -f elf32 -o $(BUILD_DIR)/entry.o
+$(BUILD_DIR)/entry.o: $(KERNEL_DIR)/cpu/entry.asm always
+	$(ASM) $< -f elf32 -o $@
 
 # ISR stubs + isr_stub_table (32-bit; NASM defaults BITS 32 for -f elf32)
-$(BUILD_DIR)/macros.o: $(KERNEL_DIR)/macros.asm always
-	$(ASM) $(KERNEL_DIR)/macros.asm -f elf32 -o $(BUILD_DIR)/macros.o
+$(BUILD_DIR)/macros.o: $(KERNEL_DIR)/cpu/macros.asm always
+	$(ASM) $< -f elf32 -o $@
 
 $(BUILD_DIR)/kernel.bin: $(BUILD_DIR)/entry.o $(BUILD_DIR)/macros.o $(KERNEL_OBJ)
-	$(LD) -T $(KERNEL_DIR)/linker.ld $(BUILD_DIR)/entry.o $(BUILD_DIR)/macros.o $(KERNEL_OBJ) -o $(BUILD_DIR)/kernel.elf
+	$(LD) -T $(LINKER_LD) $(BUILD_DIR)/entry.o $(BUILD_DIR)/macros.o $(KERNEL_OBJ) -o $(BUILD_DIR)/kernel.elf
 	$(OBJCOPY) -O binary $(BUILD_DIR)/kernel.elf $(BUILD_DIR)/kernel.bin
 
 #

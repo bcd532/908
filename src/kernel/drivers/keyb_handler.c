@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "keyb_handler.h"
-#include "io.h"
-#include "kvgaprintf.h"
+#include <drivers/keyb_handler.h>
+#include <cpu/io.h>
+#include <lib/kprintf.h>
 
 static const char kmap_lowercase[128] = {
 
@@ -50,7 +50,9 @@ static const char kmap_lowercase[128] = {
     /* extra special map */
     [0x39] = ' ',
     [0x0E] = '\b',
-    [0x1C] = '\n'
+    [0x1C] = '\n',
+    [0x0C] = '-',
+    [0x0D] - '='
 };
 
 static const char kmap_uppercase[128] = {
@@ -98,7 +100,9 @@ static const char kmap_uppercase[128] = {
     /* extra special map */
     [0x39] = ' ',
     [0x0E] = '\b',
-    [0x1C] = '\n'
+    [0x1C] = '\n',
+    [0x0C] = '_',
+    [0x0D] = '+'
 
 };
 
@@ -124,8 +128,8 @@ void keyboard_handler(struct interrupt_frame *frame){
 
     /* check if in debug and if so only print scan codes*/
     if(debug){
-        if(sc < 0x80)kvgaprintf("[P: %x]",sc);
-        else kvgaprintf("[R: %x]\n", sc);
+        if(sc < 0x80)kprintf("[P: %x]",sc);
+        else kprintf("[R: %x]\n", sc);
     }
 
     /* check for shift */
@@ -134,20 +138,21 @@ void keyboard_handler(struct interrupt_frame *frame){
 
     /* set current map based on shift state*/
     const char *current_map = shifted ? kmap_uppercase : kmap_lowercase; 
-    char c = current_map[sc];
-
-
-    if(c && !debug && sc < 0x80){
-        if(c == '\n'){
-            line[line_len] = '\0'; 
-            line_ready = true;
-            kvgaprintf("\n");
-        }else if(c == '\b'){
-            if (line_len > 0) { line_len--; kvgaprintf("\b"); }
-        }else {
-            if (line_len < 127){
-            line[line_len++] = c;
-            kvgaprintf("%c", c);
+    
+    if(!debug && sc < 0x80){
+        char c = current_map[sc];
+        if(c){
+            if(c == '\n'){
+                line[line_len] = '\0'; 
+                line_ready = true;
+                kprintf("\n");
+            }else if(c == '\b'){
+                if (line_len > 0) { line_len--; kprintf("\b"); }
+            }else {
+                if (line_len < 127){
+                    line[line_len++] = c;
+                    kprintf("%c", c);
+                }
             }
         }
     }

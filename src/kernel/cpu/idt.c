@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "idt.h"
+#include <cpu/idt.h>
 
 
 extern void *isr_stub_table[];

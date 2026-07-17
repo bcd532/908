@@ -3,5 +3,5 @@
 
 #include <stdarg.h>
 
-void kvgaprintf(const char *fmt, ...);
+void kprintf(const char *fmt, ...);
 #endif

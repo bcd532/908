@@ -1,6 +1,6 @@
-#include "astdlib.h"
+#include <lib/astdlib.h>
 #include <stdint.h>
-#include "io.h"
+#include <cpu/io.h>
 
 uint32_t segment_offset_to_linear(uint16_t segment, uint16_t offset){
     return ((uint32_t)segment << 4) + offset;
