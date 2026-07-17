@@ -1,0 +1,7 @@
+-ffreestanding
+-m32
+-mgeneral-regs-only
+-std=gnu23
+-Isrc/kernel
+-Wall
+-Wextra
