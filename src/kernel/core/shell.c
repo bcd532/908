@@ -6,6 +6,7 @@
 #include <core/info.h>
 #include <core/shell.h>
 #include <lib/str.h>
+#include <drivers/pit.h>
 
 #define MAX_ARGS 8
 
@@ -40,6 +41,12 @@ static void cmd_version(int argc, char**argv){
     kprintf("version %s - %s\n", KERNEL_VERSION_SNAME, KERNEL_VERSION);
 }
 
+/* cmd_uptime: gets the uptime of the OS  */
+static void cmd_uptime(int argc, char**argv){
+    (void)argc; (void)argv;
+    kprintf("uptime in ms: %u", pit_ticks());
+}
+
 /* cmd_ping: pongs */
 static void cmd_ping(int argc, char**argv){
     (void)argc; (void)argv;
@@ -59,11 +66,8 @@ static void cmd_add(int argc, char**argv){
 /* cmd_help: FORWARD DECLARATION */
 static void cmd_help(int argc, char **argv);
 
-/* cmd_miniman: FORWARD DECLARATION */
-static void cmd_miniman(int argc, char **argv);
 
-
-/*=========================================================================
+/*=========================================================================*/
 
 
 
@@ -75,6 +79,7 @@ static const struct command commands[] ={
     {"help", cmd_help},
     {"ping", cmd_ping},
     {"add", cmd_add},
+    {"uptime", cmd_uptime}
 
 };
 
