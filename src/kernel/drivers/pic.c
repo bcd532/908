@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 void pic_remap(void){
-    uint8_t mask = 0xFD;
+    uint8_t mask = 0xFC;
     outb(0x20, 0x11); /* begin initialization icw1 ->  command port*/
         outb(0xA0, 0x11);
     outb(0x21, 0x20); /* vector offset icw2 -> data port */
