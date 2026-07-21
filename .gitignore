@@ -2,10 +2,9 @@
 build/
 __pycache__/
 
-# Logs
+# Logs & Docs
 *.log
-
-wiki/
+docs/
 
 # Binaries
 i686-elf-binutils/
