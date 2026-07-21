@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <cpu/io.h>
 #include <drivers/pit.h>
+#include <cpu/interrupts.h>
 
 #define CLOCKFREQ 1193182
 
@@ -20,6 +21,7 @@ void pit_ih(struct interrupt_frame* frame){
 void pit_init(uint32_t hz){
     // get 16-bit divisor
     uint32_t div = CLOCKFREQ / hz;
+    if (div == 0) return;
 
     // handle hardware limits and ensure the divisor fits in 16 bits    
     if (div > 65535) div = 0;

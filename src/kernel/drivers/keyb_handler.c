@@ -4,6 +4,7 @@
 #include <drivers/keyb_handler.h>
 #include <cpu/io.h>
 #include <lib/kprintf.h>
+#include <cpu/interrupts.h>
 
 #define MAX_LENGTH_SHELL_LINE 128
 #define RELEASE_KEY_SC_MIN 0x80
