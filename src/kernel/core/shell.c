@@ -44,7 +44,7 @@ static void cmd_version(int argc, char**argv){
 /* cmd_uptime: gets the uptime of the OS  */
 static void cmd_uptime(int argc, char**argv){
     (void)argc; (void)argv;
-    kprintf("uptime in ms: %u", pit_ticks());
+    kprintf("uptime in s: %u\n", pit_ticks()/100);
 }
 
 /* cmd_ping: pongs */
@@ -127,5 +127,6 @@ void shell_run(void){
             handle_command(cmd);
             console_write("[bsh=> ");
         }
+        __asm__ volatile("hlt");
     }
 }
